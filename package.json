@@ -1,0 +1,12 @@
+{
+  "name": "bollywood-safar-spotify",
+  "version": "1.0.0",
+  "description": "Bollywood Safar Spotify Music Website",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Bollywood Safar | 2000s Bollywood Music</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="overlay">
+
+        <header>
+            <h1>🎵 Bollywood Safar</h1>
+            <p>Your Journey Through 2000s Bollywood Music</p>
+        </header>
+
+        <main>
+
+            <div class="player-card">
+
+                <button id="login-btn" class="shuffle-button" style="margin-bottom: 18px;">
+                    🔗 Connect to Spotify
+                </button>
+
+                <p class="now-playing">NOW PLAYING</p>
+
+                <div class="song-info">
+                    <h2 id="song-title">Select Your Musical Journey</h2>
+                    <p id="artist-name">2000s Bollywood Collection</p>
+                    <p id="album-name">Bollywood Safar</p>
+                </div>
+
+                <div class="progress-container">
+                    <span id="current-time">0:00</span>
+
+                    <input 
+                        type="range" 
+                        id="progress-bar" 
+                        value="0" 
+                        min="0" 
+                        max="100"
+                    >
+
+                    <span id="duration">0:00</span>
+                </div>
+
+                <div class="controls">
+
+                    <button id="prev-btn" aria-label="Previous Song">
+                        ⏮
+                    </button>
+
+                    <button id="play-btn" class="play-button" aria-label="Play Song">
+                        ▶
+                    </button>
+
+                    <button id="next-btn" aria-label="Next Song">
+                        ⏭
+                    </button>
+
+                </div>
+
+                <button id="shuffle-btn" class="shuffle-button">
+                    🔀 Shuffle Journey
+                </button>
+
+            </div>
+
+        </main>
+
+        <footer>
+            <p>🎶 Only 2000s Bollywood • No Search • Just Music</p>
+        </footer>
+
+    </div>
+
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script src="songs.js"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
