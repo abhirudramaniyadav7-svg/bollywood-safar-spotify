@@ -11,8 +11,6 @@
 const CLIENT_ID = "74ad2db9497e4726b81fb0b9cfa34ec6";
 
 const REDIRECT_URI =
-    "http://127.0.0.1:3000/callback";
-const redirectUri =
     "https://bollywood-safar-spotify-0dc7.onrender.com/callback";
 
 const SCOPES = [
