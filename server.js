@@ -3,9 +3,9 @@ const path = require("path");
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-// Serve all website files
+// Serve static files
 app.use(express.static(__dirname));
 
 // Homepage
@@ -15,11 +15,6 @@ app.get("/", (req, res) => {
 
 // Spotify callback
 app.get("/callback", (req, res) => {
-    res.sendFile(path.join(__dirname, "index.html"));
-});
-
-// Keep website working if another frontend route is opened
-app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
