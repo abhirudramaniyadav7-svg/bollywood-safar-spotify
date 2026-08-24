@@ -8,7 +8,7 @@
 // SPOTIFY CONFIGURATION
 // ============================================================
 
-const CLIENT_ID = "74ad2db9497e4726b81fb0b9cfa34ec6";
+const CLIENT_ID = "a12dcd0710544dcfbde7e2697f937acb";
 
 const REDIRECT_URI =
     "https://bollywood-safar-spotify-0dc7.onrender.com/callback";
@@ -35,7 +35,6 @@ let isPlaying = false;
 let playerReady = false;
 let isLoadingSong = false;
 
-// Prevent automatic next song from running multiple times
 let autoNextTriggered = false;
 
 
@@ -43,38 +42,20 @@ let autoNextTriggered = false;
 // DOM ELEMENTS
 // ============================================================
 
-const songTitle =
-    document.getElementById("song-title");
+const songTitle = document.getElementById("song-title");
+const artistName = document.getElementById("artist-name");
+const albumName = document.getElementById("album-name");
 
-const artistName =
-    document.getElementById("artist-name");
+const playButton = document.getElementById("play-btn");
+const nextButton = document.getElementById("next-btn");
+const previousButton = document.getElementById("prev-btn");
+const shuffleButton = document.getElementById("shuffle-btn");
 
-const albumName =
-    document.getElementById("album-name");
+const progressBar = document.getElementById("progress-bar");
+const currentTimeEl = document.getElementById("current-time");
+const durationEl = document.getElementById("duration");
 
-const playButton =
-    document.getElementById("play-btn");
-
-const nextButton =
-    document.getElementById("next-btn");
-
-const previousButton =
-    document.getElementById("prev-btn");
-
-const shuffleButton =
-    document.getElementById("shuffle-btn");
-
-const progressBar =
-    document.getElementById("progress-bar");
-
-const currentTimeEl =
-    document.getElementById("current-time");
-
-const durationEl =
-    document.getElementById("duration");
-
-const loginButton =
-    document.getElementById("login-btn");
+const loginButton = document.getElementById("login-btn");
 
 
 // ============================================================
@@ -86,17 +67,15 @@ if (
     !Array.isArray(songs) ||
     songs.length === 0
 ) {
+    console.error("songs.js was not loaded or contains no songs.");
 
-    console.error(
-        "songs.js was not loaded or contains no songs."
-    );
+    if (songTitle) {
+        songTitle.textContent = "No songs found";
+    }
 
-    songTitle.textContent =
-        "No songs found";
-
-    artistName.textContent =
-        "Check songs.js";
-
+    if (artistName) {
+        artistName.textContent = "Check songs.js";
+    }
 }
 
 
@@ -105,64 +84,45 @@ if (
 // ============================================================
 
 function generateRandomString(length) {
-
     const characters =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
     let result = "";
 
     for (let i = 0; i < length; i++) {
-
-        result +=
-            characters.charAt(
-                Math.floor(
-                    Math.random() *
-                    characters.length
-                )
-            );
-
+        result += characters.charAt(
+            Math.floor(Math.random() * characters.length)
+        );
     }
 
     return result;
-
 }
 
 
 async function sha256(value) {
-
-    const encoder =
-        new TextEncoder();
-
-    const data =
-        encoder.encode(value);
+    const encoder = new TextEncoder();
+    const data = encoder.encode(value);
 
     return window.crypto.subtle.digest(
         "SHA-256",
         data
     );
-
 }
 
 
 function base64UrlEncode(buffer) {
-
-    const bytes =
-        new Uint8Array(buffer);
+    const bytes = new Uint8Array(buffer);
 
     let string = "";
 
     for (const byte of bytes) {
-
-        string +=
-            String.fromCharCode(byte);
-
+        string += String.fromCharCode(byte);
     }
 
     return btoa(string)
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=+$/, "");
-
 }
 
 
@@ -172,50 +132,31 @@ function base64UrlEncode(buffer) {
 
 async function loginWithSpotify() {
 
-    console.log(
-        "Starting Spotify login..."
+    console.log("Starting Spotify login...");
+
+    const verifier = generateRandomString(64);
+
+    const challenge = base64UrlEncode(
+        await sha256(verifier)
     );
-
-    const verifier =
-        generateRandomString(64);
-
-    const challenge =
-        base64UrlEncode(
-            await sha256(verifier)
-        );
 
     sessionStorage.setItem(
         "spotify_code_verifier",
         verifier
     );
 
-    const params =
-        new URLSearchParams({
-
-            client_id:
-                CLIENT_ID,
-
-            response_type:
-                "code",
-
-            redirect_uri:
-                REDIRECT_URI,
-
-            scope:
-                SCOPES,
-
-            code_challenge_method:
-                "S256",
-
-            code_challenge:
-                challenge
-
-        });
+    const params = new URLSearchParams({
+        client_id: CLIENT_ID,
+        response_type: "code",
+        redirect_uri: REDIRECT_URI,
+        scope: SCOPES,
+        code_challenge_method: "S256",
+        code_challenge: challenge
+    });
 
     window.location.href =
         "https://accounts.spotify.com/authorize?" +
         params.toString();
-
 }
 
 
@@ -231,82 +172,51 @@ async function exchangeCodeForToken(code) {
         );
 
     if (!verifier) {
-
         showError(
             "Login session expired. Please login again."
         );
-
         return;
-
     }
 
     try {
 
-        const response =
-            await fetch(
-                "https://accounts.spotify.com/api/token",
-                {
+        const response = await fetch(
+            "https://accounts.spotify.com/api/token",
+            {
+                method: "POST",
 
-                    method:
-                        "POST",
+                headers: {
+                    "Content-Type":
+                        "application/x-www-form-urlencoded"
+                },
 
-                    headers: {
+                body: new URLSearchParams({
+                    client_id: CLIENT_ID,
+                    grant_type: "authorization_code",
+                    code: code,
+                    redirect_uri: REDIRECT_URI,
+                    code_verifier: verifier
+                })
+            }
+        );
 
-                        "Content-Type":
-                            "application/x-www-form-urlencoded"
-
-                    },
-
-                    body:
-                        new URLSearchParams({
-
-                            client_id:
-                                CLIENT_ID,
-
-                            grant_type:
-                                "authorization_code",
-
-                            code:
-                                code,
-
-                            redirect_uri:
-                                REDIRECT_URI,
-
-                            code_verifier:
-                                verifier
-
-                        })
-
-                }
-            );
-
-        const data =
-            await response.json();
+        const data = await response.json();
 
         if (!response.ok) {
-
-            console.error(
-                "Token error:",
-                data
-            );
+            console.error("Token error:", data);
 
             showError(
                 "Spotify login failed."
             );
 
             return;
-
         }
 
-        accessToken =
-            data.access_token;
+        accessToken = data.access_token;
 
         const expiresAt =
             Date.now() +
-            (
-                data.expires_in *
-                1000
-            );
+            (data.expires_in * 1000);
 
         sessionStorage.setItem(
             "spotify_access_token",
@@ -340,9 +250,7 @@ async function exchangeCodeForToken(code) {
         showError(
             "Could not connect to Spotify."
         );
-
     }
-
 }
 
 
@@ -352,20 +260,15 @@ async function exchangeCodeForToken(code) {
 
 function checkForAuthCode() {
 
-    const params =
-        new URLSearchParams(
-            window.location.search
-        );
+    const params = new URLSearchParams(
+        window.location.search
+    );
 
-    const code =
-        params.get("code");
+    const code = params.get("code");
 
     if (code) {
-
         exchangeCodeForToken(code);
-
         return;
-
     }
 
     const savedToken =
@@ -385,18 +288,14 @@ function checkForAuthCode() {
         expires &&
         Date.now() < expires
     ) {
-
-        accessToken =
-            savedToken;
+        accessToken = savedToken;
 
         onLoggedIn();
 
     } else {
 
         clearSpotifyLogin();
-
     }
-
 }
 
 
@@ -416,6 +315,9 @@ function clearSpotifyLogin() {
         "spotify_token_expires"
     );
 
+    sessionStorage.removeItem(
+        "spotify_code_verifier"
+    );
 }
 
 
@@ -425,20 +327,26 @@ function clearSpotifyLogin() {
 
 function onLoggedIn() {
 
-    loginButton.style.display =
-        "none";
+    if (loginButton) {
+        loginButton.style.display = "none";
+    }
 
-    songTitle.textContent =
-        "Connecting to Spotify...";
+    if (songTitle) {
+        songTitle.textContent =
+            "Connecting to Spotify...";
+    }
 
-    artistName.textContent =
-        "Please wait";
+    if (artistName) {
+        artistName.textContent =
+            "Please wait";
+    }
 
-    albumName.textContent =
-        "Bollywood Safar";
+    if (albumName) {
+        albumName.textContent =
+            "Bollywood Safar";
+    }
 
     loadSpotifySDK();
-
 }
 
 
@@ -449,16 +357,12 @@ function onLoggedIn() {
 function loadSpotifySDK() {
 
     if (window.Spotify) {
-
         initializePlayer();
-
-    } else {
-
-        window.onSpotifyWebPlaybackSDKReady =
-            initializePlayer;
-
+        return;
     }
 
+    window.onSpotifyWebPlaybackSDKReady =
+        initializePlayer;
 }
 
 
@@ -469,39 +373,41 @@ function loadSpotifySDK() {
 function initializePlayer() {
 
     if (spotifyPlayer) {
+        return;
+    }
+
+    if (!window.Spotify) {
+        console.error(
+            "Spotify Web Playback SDK not loaded."
+        );
+
+        showError(
+            "Spotify SDK failed to load."
+        );
 
         return;
-
     }
 
     console.log(
         "Initializing Spotify Player..."
     );
 
-    spotifyPlayer =
-        new Spotify.Player({
+    spotifyPlayer = new Spotify.Player({
 
-            name:
-                "Bollywood Safar Web Player",
+        name:
+            "Bollywood Safar Web Player",
 
-            getOAuthToken:
-                callback => {
+        getOAuthToken:
+            callback => {
+                callback(accessToken);
+            },
 
-                    callback(
-                        accessToken
-                    );
-
-                },
-
-            volume:
-                0.8
-
-        });
+        volume:
+            0.8
+    });
 
 
-    // ========================================================
     // PLAYER READY
-    // ========================================================
 
     spotifyPlayer.addListener(
         "ready",
@@ -512,11 +418,9 @@ function initializePlayer() {
                 device_id
             );
 
-            deviceId =
-                device_id;
+            deviceId = device_id;
 
-            playerReady =
-                true;
+            playerReady = true;
 
             loadSong(
                 currentSongIndex
@@ -526,14 +430,11 @@ function initializePlayer() {
                 "Songs available:",
                 songs.length
             );
-
         }
     );
 
 
-    // ========================================================
     // PLAYER NOT READY
-    // ========================================================
 
     spotifyPlayer.addListener(
         "not_ready",
@@ -544,16 +445,12 @@ function initializePlayer() {
                 device_id
             );
 
-            playerReady =
-                false;
-
+            playerReady = false;
         }
     );
 
 
-    // ========================================================
     // INITIALIZATION ERROR
-    // ========================================================
 
     spotifyPlayer.addListener(
         "initialization_error",
@@ -567,14 +464,11 @@ function initializePlayer() {
             showError(
                 "Spotify player could not start."
             );
-
         }
     );
 
 
-    // ========================================================
     // AUTHENTICATION ERROR
-    // ========================================================
 
     spotifyPlayer.addListener(
         "authentication_error",
@@ -587,20 +481,19 @@ function initializePlayer() {
 
             clearSpotifyLogin();
 
-            loginButton.style.display =
-                "inline-block";
+            if (loginButton) {
+                loginButton.style.display =
+                    "inline-block";
+            }
 
             showError(
                 "Spotify session expired. Login again."
             );
-
         }
     );
 
 
-    // ========================================================
-    // PREMIUM ACCOUNT ERROR
-    // ========================================================
+    // ACCOUNT ERROR
 
     spotifyPlayer.addListener(
         "account_error",
@@ -615,16 +508,15 @@ function initializePlayer() {
                 "Spotify Premium is required."
             );
 
-            artistName.textContent =
-                "Please login with Spotify Premium";
-
+            if (artistName) {
+                artistName.textContent =
+                    "Please login with Spotify Premium";
+            }
         }
     );
 
 
-    // ========================================================
     // PLAYBACK ERROR
-    // ========================================================
 
     spotifyPlayer.addListener(
         "playback_error",
@@ -634,37 +526,29 @@ function initializePlayer() {
                 "Playback error:",
                 message
             );
-
         }
     );
 
 
-    // ========================================================
     // PLAYER STATE
-    // ========================================================
 
     spotifyPlayer.addListener(
         "player_state_changed",
         async state => {
 
             if (!state) {
-
                 return;
-
             }
 
-            isPlaying =
-                !state.paused;
+            isPlaying = !state.paused;
 
-            playButton.textContent =
-                isPlaying
-                    ? "❚❚"
-                    : "▶";
+            if (playButton) {
+                playButton.textContent =
+                    isPlaying ? "❚❚" : "▶";
+            }
 
 
-            // =================================================
             // UPDATE SONG INFORMATION
-            // =================================================
 
             if (
                 state.track_window &&
@@ -674,43 +558,39 @@ function initializePlayer() {
                 const currentTrack =
                     state.track_window.current_track;
 
-                if (currentTrack.name) {
-
+                if (
+                    currentTrack.name &&
+                    songTitle
+                ) {
                     songTitle.textContent =
                         currentTrack.name;
-
                 }
 
                 if (
                     currentTrack.artists &&
-                    currentTrack.artists.length > 0
+                    currentTrack.artists.length > 0 &&
+                    artistName
                 ) {
-
                     artistName.textContent =
                         currentTrack.artists
                             .map(
                                 artist => artist.name
                             )
                             .join(", ");
-
                 }
 
                 if (
                     currentTrack.album &&
-                    currentTrack.album.name
+                    currentTrack.album.name &&
+                    albumName
                 ) {
-
                     albumName.textContent =
                         currentTrack.album.name;
-
                 }
-
             }
 
 
-            // =================================================
-            // UPDATE PROGRESS BAR
-            // =================================================
+            // UPDATE PROGRESS
 
             if (
                 state.duration &&
@@ -718,38 +598,34 @@ function initializePlayer() {
             ) {
 
                 const percentage =
-                    (
-                        state.position /
-                        state.duration
-                    ) * 100;
+                    (state.position /
+                        state.duration) * 100;
 
-                progressBar.value =
-                    percentage;
+                if (progressBar) {
+                    progressBar.value =
+                        percentage;
+                }
 
-                currentTimeEl.textContent =
-                    formatTime(
-                        state.position / 1000
-                    );
+                if (currentTimeEl) {
+                    currentTimeEl.textContent =
+                        formatTime(
+                            state.position / 1000
+                        );
+                }
 
-                durationEl.textContent =
-                    formatTime(
-                        state.duration / 1000
-                    );
+                if (durationEl) {
+                    durationEl.textContent =
+                        formatTime(
+                            state.duration / 1000
+                        );
+                }
 
 
-                // =============================================
                 // AUTOMATIC NEXT SONG
-                // =============================================
-                //
-                // When the current song is almost finished,
-                // automatically load and play the next song.
-                //
-                // =============================================
 
                 const remainingTime =
                     state.duration -
                     state.position;
-
 
                 if (
                     isPlaying &&
@@ -758,8 +634,7 @@ function initializePlayer() {
                     !isLoadingSong
                 ) {
 
-                    autoNextTriggered =
-                        true;
+                    autoNextTriggered = true;
 
                     console.log(
                         "Song finished. Playing next song..."
@@ -775,8 +650,7 @@ function initializePlayer() {
 
                                 currentSongIndex =
                                     (
-                                        currentSongIndex +
-                                        1
+                                        currentSongIndex + 1
                                     ) %
                                     songs.length;
 
@@ -785,38 +659,27 @@ function initializePlayer() {
                                 );
 
                                 await playCurrentSong();
-
                             }
-
                         },
                         500
                     );
-
                 }
 
 
-                // Reset automatic next trigger
-                // when a new song begins
+                // RESET AUTO NEXT
 
                 if (
                     state.position < 3000 &&
-                    remainingTime >
-                    3000
+                    remainingTime > 3000
                 ) {
-
-                    autoNextTriggered =
-                        false;
-
+                    autoNextTriggered = false;
                 }
-
             }
-
         }
     );
 
 
     spotifyPlayer.connect();
-
 }
 
 
@@ -830,33 +693,40 @@ function loadSong(index) {
         !songs ||
         !songs[index]
     ) {
-
         return;
-
     }
 
-    const song =
-        songs[index];
+    const song = songs[index];
 
-    songTitle.textContent =
-        song.title;
+    if (songTitle) {
+        songTitle.textContent =
+            song.title;
+    }
 
-    artistName.textContent =
-        song.artist;
+    if (artistName) {
+        artistName.textContent =
+            song.artist;
+    }
 
-    albumName.textContent =
-        song.album ||
-        "Bollywood Safar";
+    if (albumName) {
+        albumName.textContent =
+            song.album ||
+            "Bollywood Safar";
+    }
 
-    progressBar.value =
-        0;
+    if (progressBar) {
+        progressBar.value = 0;
+    }
 
-    currentTimeEl.textContent =
-        "0:00";
+    if (currentTimeEl) {
+        currentTimeEl.textContent =
+            "0:00";
+    }
 
-    durationEl.textContent =
-        "0:00";
-
+    if (durationEl) {
+        durationEl.textContent =
+            "0:00";
+    }
 }
 
 
@@ -871,7 +741,6 @@ function normalize(text) {
         .replace(/[^\w\s]/g, "")
         .replace(/\s+/g, " ")
         .trim();
-
 }
 
 
@@ -887,7 +756,6 @@ function getCacheKey(song) {
         "_" +
         normalize(song.artist)
     );
-
 }
 
 
@@ -906,7 +774,7 @@ async function searchTrack(song) {
         );
 
 
-    // Use cached Spotify URI
+    // USE CACHED URI
 
     if (cachedUri) {
 
@@ -916,7 +784,6 @@ async function searchTrack(song) {
         );
 
         return cachedUri;
-
     }
 
 
@@ -927,13 +794,10 @@ async function searchTrack(song) {
         `${song.title} ${song.artist}`,
 
         `track:${song.title}`
-
     ];
 
 
-    for (
-        const query of queries
-    ) {
+    for (const query of queries) {
 
         try {
 
@@ -942,38 +806,24 @@ async function searchTrack(song) {
                 query
             );
 
-            const response =
-                await fetch(
+            const response = await fetch(
 
-                    "https://api.spotify.com/v1/search?" +
-                    new URLSearchParams({
+                "https://api.spotify.com/v1/search?" +
 
-                        q:
-                            query,
+                new URLSearchParams({
+                    q: query,
+                    type: "track",
+                    limit: "10",
+                    market: "IN"
+                }),
 
-                        type:
-                            "track",
-
-                        limit:
-                            "10",
-
-                        market:
-                            "IN"
-
-                    }),
-
-                    {
-
-                        headers: {
-
-                            Authorization:
-                                `Bearer ${accessToken}`
-
-                        }
-
+                {
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`
                     }
-
-                );
+                }
+            );
 
 
             if (!response.ok) {
@@ -989,19 +839,19 @@ async function searchTrack(song) {
 
                     clearSpotifyLogin();
 
-                    loginButton.style.display =
-                        "inline-block";
+                    if (loginButton) {
+                        loginButton.style.display =
+                            "inline-block";
+                    }
 
                     showError(
                         "Spotify session expired. Login again."
                     );
 
                     return null;
-
                 }
 
                 continue;
-
             }
 
 
@@ -1013,108 +863,86 @@ async function searchTrack(song) {
 
 
             if (!tracks.length) {
-
                 continue;
-
             }
 
 
             const targetTitle =
-                normalize(
-                    song.title
-                );
+                normalize(song.title);
 
             const targetArtist =
-                normalize(
-                    song.artist
-                );
+                normalize(song.artist);
 
 
-            // Exact title and artist match
+            // EXACT TITLE AND ARTIST
 
             let bestMatch =
-                tracks.find(
-                    track => {
+                tracks.find(track => {
 
-                        const spotifyTitle =
-                            normalize(
-                                track.name
-                            );
+                    const spotifyTitle =
+                        normalize(track.name);
 
-                        const spotifyArtists =
-                            track.artists
-                                .map(
-                                    artist =>
-                                        normalize(
-                                            artist.name
-                                        )
-                                )
-                                .join(" ");
-
-                        return (
-                            spotifyTitle ===
-                            targetTitle
-                        ) &&
-                        (
-                            spotifyArtists.includes(
-                                targetArtist
+                    const spotifyArtists =
+                        track.artists
+                            .map(
+                                artist =>
+                                    normalize(
+                                        artist.name
+                                    )
                             )
-                        );
+                            .join(" ");
 
-                    }
-                );
+                    return (
+                        spotifyTitle ===
+                        targetTitle
+                    ) &&
+                    (
+                        spotifyArtists.includes(
+                            targetArtist
+                        )
+                    );
+                });
 
 
-            // Exact title match
+            // EXACT TITLE
 
             if (!bestMatch) {
 
                 bestMatch =
                     tracks.find(
                         track =>
-                            normalize(
-                                track.name
-                            ) === targetTitle
+                            normalize(track.name) ===
+                            targetTitle
                     );
-
             }
 
 
-            // Title contains match
+            // PARTIAL TITLE MATCH
 
             if (!bestMatch) {
 
                 bestMatch =
-                    tracks.find(
-                        track => {
+                    tracks.find(track => {
 
-                            const spotifyTitle =
-                                normalize(
-                                    track.name
-                                );
+                        const spotifyTitle =
+                            normalize(track.name);
 
-                            return (
-                                spotifyTitle.includes(
-                                    targetTitle
-                                ) ||
-                                targetTitle.includes(
-                                    spotifyTitle
-                                )
-                            );
-
-                        }
-                    );
-
+                        return (
+                            spotifyTitle.includes(
+                                targetTitle
+                            ) ||
+                            targetTitle.includes(
+                                spotifyTitle
+                            )
+                        );
+                    });
             }
 
 
-            // First result as fallback
+            // FIRST RESULT
 
             if (!bestMatch) {
-
-                bestMatch =
-                    tracks[0];
-
+                bestMatch = tracks[0];
             }
 
 
@@ -1133,7 +961,6 @@ async function searchTrack(song) {
                 );
 
                 return bestMatch.uri;
-
             }
 
         } catch (error) {
@@ -1142,14 +969,10 @@ async function searchTrack(song) {
                 "Search error:",
                 error
             );
-
         }
-
     }
 
-
     return null;
-
 }
 
 
@@ -1160,9 +983,7 @@ async function searchTrack(song) {
 async function playCurrentSong() {
 
     if (isLoadingSong) {
-
         return;
-
     }
 
 
@@ -1176,7 +997,6 @@ async function playCurrentSong() {
         );
 
         return;
-
     }
 
 
@@ -1185,39 +1005,37 @@ async function playCurrentSong() {
 
 
     if (!song) {
-
         return;
-
     }
 
 
-    isLoadingSong =
-        true;
+    isLoadingSong = true;
 
 
-    songTitle.textContent =
-        `Finding ${song.title}...`;
+    if (songTitle) {
+        songTitle.textContent =
+            `Finding ${song.title}...`;
+    }
 
-    artistName.textContent =
-        song.artist;
+    if (artistName) {
+        artistName.textContent =
+            song.artist;
+    }
 
 
     try {
 
-        let uri =
-            song.uri;
+        let uri = song.uri;
 
 
-        // Search only when URI is missing
+        // SEARCH ONLY IF URI IS MISSING
 
         if (!uri) {
 
             uri =
                 await searchTrack(song);
 
-            song.uri =
-                uri;
-
+            song.uri = uri;
         }
 
 
@@ -1228,53 +1046,39 @@ async function playCurrentSong() {
             );
 
             return;
-
         }
 
 
-        // Reset auto next for new song
-
-        autoNextTriggered =
-            false;
+        autoNextTriggered = false;
 
 
-        // Activate Spotify Web Player
+        // ACTIVATE PLAYER
 
         await spotifyPlayer.activateElement();
 
 
-        const response =
-            await fetch(
+        const response = await fetch(
 
-                `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
+            `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
 
-                {
+            {
+                method: "PUT",
 
-                    method:
-                        "PUT",
+                headers: {
 
-                    headers: {
+                    Authorization:
+                        `Bearer ${accessToken}`,
 
-                        Authorization:
-                            `Bearer ${accessToken}`,
+                    "Content-Type":
+                        "application/json"
+                },
 
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            uris: [
-                                uri
-                            ]
-
-                        })
-
-                }
-
-            );
+                body:
+                    JSON.stringify({
+                        uris: [uri]
+                    })
+            }
+        );
 
 
         if (!response.ok) {
@@ -1292,7 +1096,6 @@ async function playCurrentSong() {
             );
 
             return;
-
         }
 
 
@@ -1319,11 +1122,8 @@ async function playCurrentSong() {
 
     } finally {
 
-        isLoadingSong =
-            false;
-
+        isLoadingSong = false;
     }
-
 }
 
 
@@ -1331,270 +1131,258 @@ async function playCurrentSong() {
 // PLAY / PAUSE
 // ============================================================
 
-playButton.addEventListener(
-    "click",
-    async () => {
+if (playButton) {
 
-        if (!spotifyPlayer) {
+    playButton.addEventListener(
+        "click",
+        async () => {
 
-            showError(
-                "Connect to Spotify first."
-            );
+            if (!spotifyPlayer) {
 
-            return;
+                showError(
+                    "Connect to Spotify first."
+                );
 
-        }
-
-
-        if (isPlaying) {
-
-            await spotifyPlayer.pause();
-
-            return;
-
-        }
-
-
-        try {
-
-            const state =
-                await spotifyPlayer.getCurrentState();
-
-
-            if (
-                state &&
-                state.paused &&
-                state.position > 0
-            ) {
-
-                await spotifyPlayer.resume();
-
-            } else {
-
-                await playCurrentSong();
-
+                return;
             }
 
-        } catch (error) {
 
-            console.error(
-                "Play button error:",
-                error
-            );
+            if (isPlaying) {
 
-            await playCurrentSong();
+                await spotifyPlayer.pause();
 
+                return;
+            }
+
+
+            try {
+
+                const state =
+                    await spotifyPlayer.getCurrentState();
+
+
+                if (
+                    state &&
+                    state.paused &&
+                    state.position > 0
+                ) {
+
+                    await spotifyPlayer.resume();
+
+                } else {
+
+                    await playCurrentSong();
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Play button error:",
+                    error
+                );
+
+                await playCurrentSong();
+            }
         }
-
-    }
-);
+    );
+}
 
 
 // ============================================================
 // NEXT SONG
 // ============================================================
 
-nextButton.addEventListener(
-    "click",
-    async () => {
+if (nextButton) {
 
-        if (
-            !songs ||
-            songs.length === 0
-        ) {
+    nextButton.addEventListener(
+        "click",
+        async () => {
 
-            return;
+            if (
+                !songs ||
+                songs.length === 0
+            ) {
+                return;
+            }
 
+
+            currentSongIndex =
+                (
+                    currentSongIndex + 1
+                ) %
+                songs.length;
+
+
+            autoNextTriggered = false;
+
+
+            loadSong(
+                currentSongIndex
+            );
+
+
+            await playCurrentSong();
         }
-
-
-        currentSongIndex =
-            (
-                currentSongIndex +
-                1
-            ) %
-            songs.length;
-
-
-        autoNextTriggered =
-            false;
-
-
-        loadSong(
-            currentSongIndex
-        );
-
-
-        await playCurrentSong();
-
-    }
-);
+    );
+}
 
 
 // ============================================================
 // PREVIOUS SONG
 // ============================================================
 
-previousButton.addEventListener(
-    "click",
-    async () => {
+if (previousButton) {
 
-        if (
-            !songs ||
-            songs.length === 0
-        ) {
+    previousButton.addEventListener(
+        "click",
+        async () => {
 
-            return;
+            if (
+                !songs ||
+                songs.length === 0
+            ) {
+                return;
+            }
 
+
+            currentSongIndex =
+                (
+                    currentSongIndex -
+                    1 +
+                    songs.length
+                ) %
+                songs.length;
+
+
+            autoNextTriggered = false;
+
+
+            loadSong(
+                currentSongIndex
+            );
+
+
+            await playCurrentSong();
         }
-
-
-        currentSongIndex =
-            (
-                currentSongIndex -
-                1 +
-                songs.length
-            ) %
-            songs.length;
-
-
-        autoNextTriggered =
-            false;
-
-
-        loadSong(
-            currentSongIndex
-        );
-
-
-        await playCurrentSong();
-
-    }
-);
+    );
+}
 
 
 // ============================================================
 // SHUFFLE SONG
 // ============================================================
 
-shuffleButton.addEventListener(
-    "click",
-    async () => {
+if (shuffleButton) {
 
-        if (
-            !songs ||
-            songs.length < 2
-        ) {
+    shuffleButton.addEventListener(
+        "click",
+        async () => {
 
-            return;
+            if (
+                !songs ||
+                songs.length < 2
+            ) {
+                return;
+            }
 
+
+            let newIndex;
+
+
+            do {
+
+                newIndex =
+                    Math.floor(
+                        Math.random() *
+                        songs.length
+                    );
+
+            } while (
+                newIndex ===
+                currentSongIndex
+            );
+
+
+            currentSongIndex =
+                newIndex;
+
+
+            autoNextTriggered = false;
+
+
+            loadSong(
+                currentSongIndex
+            );
+
+
+            await playCurrentSong();
         }
-
-
-        let newIndex;
-
-
-        do {
-
-            newIndex =
-                Math.floor(
-                    Math.random() *
-                    songs.length
-                );
-
-        } while (
-            newIndex ===
-            currentSongIndex
-        );
-
-
-        currentSongIndex =
-            newIndex;
-
-
-        autoNextTriggered =
-            false;
-
-
-        loadSong(
-            currentSongIndex
-        );
-
-
-        await playCurrentSong();
-
-    }
-);
+    );
+}
 
 
 // ============================================================
 // SEEK SONG
 // ============================================================
 
-progressBar.addEventListener(
-    "input",
-    async () => {
+if (progressBar) {
 
-        if (!spotifyPlayer) {
+    progressBar.addEventListener(
+        "input",
+        async () => {
 
-            return;
-
-        }
-
-
-        try {
-
-            const state =
-                await spotifyPlayer.getCurrentState();
-
-
-            if (
-                !state ||
-                !state.duration
-            ) {
-
+            if (!spotifyPlayer) {
                 return;
-
             }
 
 
-            const seekPosition =
-                (
-                    Number(
-                        progressBar.value
-                    ) / 100
-                ) *
-                state.duration;
+            try {
+
+                const state =
+                    await spotifyPlayer.getCurrentState();
 
 
-            await spotifyPlayer.seek(
-                seekPosition
-            );
+                if (
+                    !state ||
+                    !state.duration
+                ) {
+                    return;
+                }
 
 
-            // Allow automatic next again after seeking
+                const seekPosition =
+                    (
+                        Number(
+                            progressBar.value
+                        ) / 100
+                    ) *
+                    state.duration;
 
-            if (
-                seekPosition <
-                state.duration - 2000
-            ) {
 
-                autoNextTriggered =
-                    false;
+                await spotifyPlayer.seek(
+                    seekPosition
+                );
 
+
+                if (
+                    seekPosition <
+                    state.duration - 2000
+                ) {
+
+                    autoNextTriggered =
+                        false;
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Seek error:",
+                    error
+                );
             }
-
-        } catch (error) {
-
-            console.error(
-                "Seek error:",
-                error
-            );
-
         }
-
-    }
-);
+    );
+}
 
 
 // ============================================================
@@ -1606,22 +1394,16 @@ function formatTime(seconds) {
     if (
         !Number.isFinite(seconds)
     ) {
-
         return "0:00";
-
     }
 
 
     const minutes =
-        Math.floor(
-            seconds / 60
-        );
+        Math.floor(seconds / 60);
 
 
     const remainingSeconds =
-        Math.floor(
-            seconds % 60
-        );
+        Math.floor(seconds % 60);
 
 
     return (
@@ -1634,7 +1416,6 @@ function formatTime(seconds) {
             "0"
         )
     );
-
 }
 
 
@@ -1644,13 +1425,12 @@ function formatTime(seconds) {
 
 function showError(message) {
 
-    console.error(
-        message
-    );
+    console.error(message);
 
-    songTitle.textContent =
-        message;
-
+    if (songTitle) {
+        songTitle.textContent =
+            message;
+    }
 }
 
 
@@ -1658,10 +1438,13 @@ function showError(message) {
 // LOGIN BUTTON
 // ============================================================
 
-loginButton.addEventListener(
-    "click",
-    loginWithSpotify
-);
+if (loginButton) {
+
+    loginButton.addEventListener(
+        "click",
+        loginWithSpotify
+    );
+}
 
 
 // ============================================================
